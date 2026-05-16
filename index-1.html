@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DONE — Task Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+<style>
+/* ╔══════════════════════════════════════════════╗
+   ║  DESIGN TOKENS                               ║
+   ╚══════════════════════════════════════════════╝ */
+:root {
+  /* Light palette — aged paper editorial */
+  --bg:          #f7f4ef;
+  --bg2:         #edeae3;
+  --surface:     #faf8f4;
+  --surface2:    #f0ece4;
+  --border:      #c9c3b8;
+  --border2:     #ddd8d0;
+  --txt:         #1a1714;
+  --txt2:        #5c554d;
+  --txt3:        #9a9189;
+  --accent:      #c0392b;       /* bold red headline ink */
+  --accent-dim:  #f8e8e6;
+  --accent-hover:#a93226;
+  --green:       #1e6b3e;
+  --green-dim:   #e4f0e9;
+  --amber:       #b5620e;
+  --amber-dim:   #fdf0e2;
+  --shadow:      0 2px 0px #c9c3b8, 0 4px 16px rgba(26,23,20,.08);
+  --shadow-lg:   0 3px 0px #b0aa9f, 0 8px 32px rgba(26,23,20,.13);
+  --shadow-inset:inset 0 2px 6px rgba(26,23,20,.07);
+  --r:           4px;           /* editorial — almost no rounding */
+  --ease:        .2s cubic-bezier(.4,0,.2,1);
+  --font-head:   'DM Serif Display', Georgia, serif;
+  --font-body:   'DM Sans', sans-serif;
+  --font-mono:   'DM Mono', monospace;
+}
+
+[data-theme="dark"] {
+  --bg:          #141210;
+  --bg2:         #1d1a17;
+  --surface:     #1a1714;
+  --surface2:    #221f1b;
+  --border:      #302c28;
+  --border2:     #282420;
+  --txt:         #f0ece6;
+  --txt2:        #9a9189;
+  --txt3:        #4a4540;
+  --accent:      #e05a4b;
+  --accent-dim:  #2a1512;
+  --accent-hover:#f06a5b;
+  --green:       #3aaa66;
+  --green-dim:   #0e2a1a;
+  --amber:       #e0902e;
+  --amber-dim:   #2a1a06;
+  --shadow:      0 2px 0px #0a0906, 0 4px 16px rgba(0,0,0,.4);
+  --shadow-lg:   0 3px 0px #0a0906, 0 8px 32px rgba(0,0,0,.6);
+  --shadow-inset:inset 0 2px 6px rgba(0,0,0,.3);
+}
+
+/* ╔══════════════════════════════════════════════╗
+   ║  RESET                                       ║
+   ╚══════════════════════════════════════════════╝ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  font-family:var(--font-body);
+  background:var(--bg);
+  color:var(--txt);
+  min-height:100vh;
+  transition:background var(--ease),color var(--ease);
+  -webkit-font-smoothing:antialiased;
+  /* subtle paper grain */
+  background-image:
+    radial-gradient(circle at 20% 80%, rgba(192,57,43,.03) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(30,107,62,.03) 0%, transparent 50%);
+}
+button{cursor:pointer;font-family:inherit;border:none;background:none;}
+input{font-family:inherit;}
+ul{list-style:none;}
+
+/* ╔══════════════════════════════════════════════╗
+   ║  LAYOUT SHELL                                ║
+   ╚══════════════════════════════════════════════╝ */
+.page{
+  max-width:720px;
+  margin:0 auto;
+  padding:0 20px 80px;
+}
+
+/* ╔══════════════════════════════════════════════╗
+   ║  MASTHEAD                                    ║
+   ╚══════════════════════════════════════════════╝ */
+.masthead{
+  border-bottom:4px solid var(--txt);
+  padding:28px 0 16px;
+  display:grid;
+  grid-template-columns:1fr auto;
+  align-items:end;
+  gap:16px;
+  margin-bottom:0;
+}
+.masthead-left{}
+.issue-line{
+  font-family:var(--font-mono);
+  font-size:.67rem;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:var(--txt3);
+  margin-bottom:6px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.issue-line::before{
+  content:'';display:block;
+  width:20px;height:1px;background:var(--txt3);
+}
+.masthead h1{
+  font-family:var(--font-head);
+  font-size:clamp(2.8rem, 8vw, 4.4rem);
+  line-height:.9;
+  letter-spacing:-.02em;
+  color:var(--txt);
+}
+.masthead h1 em{
+  font-style:italic;
+  color:var(--accent);
+}
+.masthead-right{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:8px;
+  padding-bottom:4px;
+}
+.theme-btn{
+  width:36px;height:36px;
+  border:1.5px solid var(--border);
+  border-radius:var(--r);
+  background:var(--surface);
+  display:flex;align-items:center;justify-content:center;
+  font-size:.95rem;
+  box-shadow:var(--shadow);
+  transition:all var(--ease);
+  color:var(--txt2);
+}
+.theme-btn:hover{border-color:var(--accent);color:var(--accent);transform:scale(1.07);}
+.date-str{
+  font-family:var(--font-mono);font-size:.65rem;
+  color:var(--txt3);letter-spacing:.05em;
+  text-transform:uppercase;white-space:nowrap;
+}
+
+/* ╔══════════════════════════════════════════════╗
+   ║  STATS RIBBON                                ║
+   ╚══════════════════════════════════════════════╝ */
+.stats-ribbon{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  border-bottom:1.5px solid var(--border);
+  margin-bottom:24px;
+}
+.stat-cell{
+  padding:14px 0;
+  text-align:center;
+  transition:background var(--ease);
+}
+.stat-cell+.stat-cell{border-left:1.5px solid var(--border);}
+.stat-cell:hover{background:var(--surface2);}
+.stat-n{
+  font-family:var(--font-head);
+  font-size:2rem;
+  line-height:1;
+  display:block;
+}
+.stat-cell:nth-child(1) .stat-n{color:var(--txt);}
+.stat-cell:nth-child(2) .stat-n{color:var(--amber);}
+.stat-cell:nth-child(3) .stat-n{color:var(--green);}
+.stat-lbl{
+  font-family:var(--font-mono);
+  font-size:.63rem;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:var(--txt3);
+  margin-top:3px;
+  display:block;
+}
+
+/* ╔══════════════════════════════════════════════╗
+   ║  INPUT SECTION                               ║
+   ╚══════════════════════════════════════════════╝ */
+.composer{
+  display:flex;gap:0;
+  margin-bottom:20px;
+  box-shadow:var(--shadow);
+  border:1.5px solid var(--border);
+  border-radius:var(--r);
+  overflow:hidden;
+  transition:box-shadow var(--ease),border-color var(--ease);
+  background:var(--surface);
+}
+.composer:focus-within{
+  border-color:var(--accent);
+  box-shadow:var(--shadow-lg);
+}
+.composer-prefix{
+  padding:0 14px;
+  display:flex;align-items:center;
+  border-right:1.5px solid var(--border2);
+  background:var(--surface2);
+  color:var(--txt3);
+  font-family:var(--font-mono);
+  font-size:.9rem;
+  flex-shrink:0;
+  transition:border-color var(--ease);
+  user-select:none;
+}
+.composer:focus-within .composer-prefix{border-color:var(--border);}
+#task-input{
+  flex:1;
+  border:none;background:transparent;
+  padding:14px 16px;
+  font-size:.97rem;
+  font-weight:500;
+  color:var(--txt);
+  outline:none;
+  min-width:0;
+}
+#task-input::placeholder{color:var(--txt3);font-weight:400;}
+.add-btn{
+  padding:0 22px;
+  background:var(--accent);
+  color:#fff;
+  font-family:var(--font-mono);
+  font-size:.8rem;
+  font-weight:500;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  display:flex;align-items:center;gap:8px;
+  flex-shrink:0;
+  transition:background var(--ease),transform var(--ease);
+  border-left:1.5px solid var(--accent);
+}
+.add-btn:hover{background:var(--accent-hover);}
+.add-btn:active{transform:scale(.98);}
+.add-btn svg{width:13px;height:13px;flex-shrink:0;}
+
+/* ╔══════════════════════════════════════════════╗
+   ║  FILTER + ACTIONS BAR                        ║
+   ╚══════════════════════════════════════════════╝ */
+.toolbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:16px;
+  flex-wrap:wrap;
+}
+.filter-group{
+  display:flex;
+  gap:2px;
+  background:var(--surface2);
+  border:1.5px solid var(--border);
+  border-radius:var(--r);
+  padding:3px;
+  box-shadow:var(--shadow-inset);
+}
+.filter-btn{
+  padding:6px 16px;
+  border-radius:2px;
+  font-family:var(--font-mono);
+  font-size:.72rem;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  font-weight:500;
+  color:var(--txt2);
+  transition:all var(--ease);
+  white-space:nowrap;
+}
+.filter-btn:hover{background:var(--surface);color:var(--txt);}
+.filter-btn.on{
+  background:var(--surface);
+  color:var(--accent);
+  box-shadow:0 1px 4px rgba(0,0,0,.1);
+}
+.clear-btn{
+  font-family:var(--font-mono);
+  font-size:.7rem;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--txt3);
+  padding:6px 12px;
+  border:1.5px dashed var(--border);
+  border-radius:var(--r);
+  transition:all var(--ease);
+  white-space:nowrap;
+}
+.clear-btn:hover{color:var(--accent);border-color:var(--accent);background:var(--accent-dim);}
+
+/* ╔══════════════════════════════════════════════╗
+   ║  TASK LIST                                   ║
+   ╚══════════════════════════════════════════════╝ */
+.list-wrap{
+  background:var(--surface);
+  border:1.5px solid var(--border);
+  border-radius:var(--r);
+  box-shadow:var(--shadow);
+  overflow:hidden;
+}
+.list-head{
+  padding:12px 20px;
+  border-bottom:1.5px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.list-head-title{
+  font-family:var(--font-mono);
+  font-size:.7rem;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:var(--txt3);
+  display:flex;align-items:center;gap:8px;
+}
+.pulse{
+  width:6px;height:6px;border-radius:50%;background:var(--green);
+  animation:blink 2.2s ease infinite;
+}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.25;}}
+.list-count{
+  font-family:var(--font-mono);font-size:.7rem;color:var(--txt3);
+}
+
+#task-ul{padding:4px;}
+
+/* ╔══════════════════════════════════════════════╗
+   ║  TASK ITEM                                   ║
+   ╚══════════════════════════════════════════════╝ */
+.task{
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+  padding:12px 14px;
+  border-radius:var(--r);
+  transition:background var(--ease),transform var(--ease);
+  position:relative;
+  animation:slideDown .22s cubic-bezier(.4,0,.2,1) both;
+}
+@keyframes slideDown{
+  from{opacity:0;transform:translateY(-10px);}
+  to  {opacity:1;transform:translateY(0);}
+}
+.task:hover{background:var(--surface2);}
+.task+.task{border-top:1px solid var(--border2);}
+
+/* checkbox */
+.task-check{
+  -webkit-appearance:none;appearance:none;
+  flex-shrink:0;
+  width:18px;height:18px;
+  margin-top:2px;
+  border:2px solid var(--border);
+  border-radius:2px;
+  cursor:pointer;
+  position:relative;
+  transition:all var(--ease);
+  background:transparent;
+}
+.task-check:hover{border-color:var(--green);}
+.task-check:checked{background:var(--green);border-color:var(--green);}
+.task-check:checked::after{
+  content:'';position:absolute;
+  left:3px;top:0;
+  width:5px;height:9px;
+  border:2px solid #fff;
+  border-top:none;border-left:none;
+  transform:rotate(45deg);
+}
+
+/* body */
+.task-body{flex:1;min-width:0;}
+.task-text{
+  font-size:.92rem;
+  font-weight:500;
+  line-height:1.45;
+  color:var(--txt);
+  word-break:break-word;
+  transition:color var(--ease),opacity var(--ease);
+}
+.task-ts{
+  font-family:var(--font-mono);
+  font-size:.63rem;
+  color:var(--txt3);
+  margin-top:3px;
+  letter-spacing:.04em;
+}
+.task.done .task-text{
+  text-decoration:line-through;
+  color:var(--txt3);
+  opacity:.55;
+}
+
+/* inline edit */
+.edit-in{
+  width:100%;
+  border:none;
+  background:transparent;
+  border-bottom:2px solid var(--accent);
+  font-family:var(--font-body);
+  font-size:.92rem;
+  font-weight:500;
+  color:var(--txt);
+  outline:none;
+  padding:1px 0;
+}
+
+/* actions */
+.task-acts{
+  display:flex;gap:3px;flex-shrink:0;
+  opacity:0;transition:opacity var(--ease);
+}
+.task:hover .task-acts{opacity:1;}
+.act{
+  width:28px;height:28px;
+  border:1.5px solid var(--border2);
+  border-radius:var(--r);
+  background:var(--surface);
+  display:flex;align-items:center;justify-content:center;
+  font-size:.78rem;
+  transition:all var(--ease);
+  color:var(--txt2);
+}
+.act:hover.ed {background:var(--accent-dim);border-color:var(--accent);color:var(--accent);}
+.act:hover.dl {background:var(--accent-dim);border-color:var(--accent);color:var(--accent);}
+.act:hover.sv {background:var(--green-dim);border-color:var(--green);color:var(--green);}
+
+/* ╔══════════════════════════════════════════════╗
+   ║  EMPTY STATE                                 ║
+   ╚══════════════════════════════════════════════╝ */
+.empty{
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  padding:60px 20px;
+  text-align:center;
+}
+.empty.show{display:flex;}
+.empty-glyph{
+  font-family:var(--font-head);
+  font-style:italic;
+  font-size:4rem;
+  color:var(--border);
+  line-height:1;
+  margin-bottom:16px;
+  user-select:none;
+}
+.empty-head{
+  font-family:var(--font-head);
+  font-size:1.4rem;
+  color:var(--txt2);
+  margin-bottom:6px;
+}
+.empty-sub{
+  font-family:var(--font-mono);
+  font-size:.72rem;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--txt3);
+}
+
+/* ╔══════════════════════════════════════════════╗
+   ║  REMOVE ANIMATION                            ║
+   ╚══════════════════════════════════════════════╝ */
+@keyframes flyOut{
+  to{opacity:0;transform:translateX(24px) scale(.97);max-height:0;padding-top:0;padding-bottom:0;margin:0;overflow:hidden;}
+}
+.task.bye{animation:flyOut .2s ease forwards;overflow:hidden;}
+
+/* ╔══════════════════════════════════════════════╗
+   ║  MODAL                                       ║
+   ╚══════════════════════════════════════════════╝ */
+.veil{
+  position:fixed;inset:0;
+  background:rgba(10,8,6,.55);
+  backdrop-filter:blur(4px);
+  display:flex;align-items:center;justify-content:center;
+  z-index:900;
+  opacity:0;pointer-events:none;
+  transition:opacity .18s ease;
+  padding:20px;
+}
+.veil.on{opacity:1;pointer-events:all;}
+.modal{
+  background:var(--surface);
+  border:1.5px solid var(--border);
+  border-radius:var(--r);
+  padding:32px;
+  max-width:360px;width:100%;
+  box-shadow:var(--shadow-lg);
+  transform:translateY(12px) scale(.97);
+  transition:transform .2s cubic-bezier(.4,0,.2,1);
+}
+.veil.on .modal{transform:translateY(0) scale(1);}
+.modal-kicker{
+  font-family:var(--font-mono);font-size:.68rem;
+  letter-spacing:.12em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;
+}
+.modal-title{
+  font-family:var(--font-head);font-size:1.4rem;
+  color:var(--txt);margin-bottom:8px;
+}
+.modal-body{font-size:.86rem;color:var(--txt2);line-height:1.6;margin-bottom:26px;}
+.modal-row{display:flex;gap:8px;}
+.modal-cancel{
+  flex:1;padding:11px;
+  border:1.5px solid var(--border);border-radius:var(--r);
+  font-family:var(--font-mono);font-size:.75rem;
+  letter-spacing:.06em;text-transform:uppercase;
+  color:var(--txt2);transition:all var(--ease);
+}
+.modal-cancel:hover{background:var(--surface2);}
+.modal-confirm{
+  flex:1;padding:11px;
+  background:var(--accent);border-radius:var(--r);
+  font-family:var(--font-mono);font-size:.75rem;
+  letter-spacing:.06em;text-transform:uppercase;
+  color:#fff;font-weight:500;transition:background var(--ease);
+}
+.modal-confirm:hover{background:var(--accent-hover);}
+
+/* ╔══════════════════════════════════════════════╗
+   ║  TOAST                                       ║
+   ╚══════════════════════════════════════════════╝ */
+.toast{
+  position:fixed;bottom:24px;left:50%;
+  transform:translateX(-50%) translateY(16px);
+  background:var(--txt);color:var(--bg);
+  font-family:var(--font-mono);font-size:.75rem;
+  letter-spacing:.06em;text-transform:uppercase;
+  padding:10px 20px;border-radius:var(--r);
+  white-space:nowrap;z-index:999;
+  opacity:0;pointer-events:none;
+  transition:all .26s cubic-bezier(.4,0,.2,1);
+  box-shadow:var(--shadow-lg);
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ╔══════════════════════════════════════════════╗
+   ║  FOOTER RULE                                 ║
+   ╚══════════════════════════════════════════════╝ */
+.foot-rule{
+  margin-top:32px;
+  border-top:1px solid var(--border);
+  padding-top:12px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.foot-copy{
+  font-family:var(--font-mono);font-size:.63rem;
+  letter-spacing:.08em;text-transform:uppercase;
+  color:var(--txt3);
+}
+.foot-hint{
+  font-family:var(--font-mono);font-size:.63rem;
+  letter-spacing:.06em;color:var(--txt3);
+}
+
+/* ╔══════════════════════════════════════════════╗
+   ║  RESPONSIVE                                  ║
+   ╚══════════════════════════════════════════════╝ */
+@media(max-width:540px){
+  .masthead h1{font-size:2.4rem;}
+  .add-btn span{display:none;}
+  .add-btn{padding:0 16px;}
+  .task-acts{opacity:1;}
+  .toolbar{flex-direction:column;align-items:stretch;}
+  .filter-group{justify-content:center;}
+  .clear-btn{text-align:center;}
+}
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ══ MASTHEAD ═══════════════════════════════════ -->
+  <header class="masthead">
+    <div class="masthead-left">
+      <div class="issue-line" id="date-line">Loading…</div>
+      <h1>Do<em>ne</em>.</h1>
+    </div>
+    <div class="masthead-right">
+      <button class="theme-btn" id="theme-btn" aria-label="Toggle theme" title="Toggle dark/light mode">☀️</button>
+      <div class="date-str" id="date-str"></div>
+    </div>
+  </header>
+
+  <!-- ══ STATS RIBBON ═══════════════════════════════ -->
+  <div class="stats-ribbon" role="region" aria-label="Task statistics">
+    <div class="stat-cell">
+      <span class="stat-n" id="s-total">0</span>
+      <span class="stat-lbl">Total</span>
+    </div>
+    <div class="stat-cell">
+      <span class="stat-n" id="s-remain">0</span>
+      <span class="stat-lbl">Remaining</span>
+    </div>
+    <div class="stat-cell">
+      <span class="stat-n" id="s-done">0</span>
+      <span class="stat-lbl">Completed</span>
+    </div>
+  </div>
+
+  <!-- ══ COMPOSER ═══════════════════════════════════ -->
+  <div class="composer" role="form" aria-label="Add new task">
+    <div class="composer-prefix" aria-hidden="true">+</div>
+    <input
+      type="text" id="task-input"
+      placeholder="Write a new task and press Enter…"
+      maxlength="220" autocomplete="off"
+      aria-label="New task description"
+    />
+    <button class="add-btn" id="add-btn" aria-label="Add task">
+      <svg viewBox="0 0 13 13" fill="none" aria-hidden="true">
+        <path d="M6.5 1v11M1 6.5h11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <span>Add</span>
+    </button>
+  </div>
+
+  <!-- ══ TOOLBAR ════════════════════════════════════ -->
+  <div class="toolbar">
+    <div class="filter-group" role="group" aria-label="Filter tasks">
+      <button class="filter-btn on" data-f="all">All</button>
+      <button class="filter-btn"    data-f="active">Active</button>
+      <button class="filter-btn"    data-f="done">Completed</button>
+    </div>
+    <button class="clear-btn" id="clear-btn" title="Remove all completed tasks">
+      ✕ Clear completed
+    </button>
+  </div>
+
+  <!-- ══ TASK LIST ═══════════════════════════════════ -->
+  <div class="list-wrap">
+    <div class="list-head">
+      <div class="list-head-title">
+        <span class="pulse" aria-hidden="true"></span>
+        Task board
+      </div>
+      <div class="list-count" id="list-count" aria-live="polite">0 tasks</div>
+    </div>
+
+    <ul id="task-ul" role="list" aria-label="Task list"></ul>
+
+    <!-- Empty state -->
+    <div class="empty" id="empty" aria-live="polite">
+      <div class="empty-glyph" aria-hidden="true">∅</div>
+      <div class="empty-head" id="empty-head">Nothing here yet</div>
+      <div class="empty-sub"  id="empty-sub">Add your first task above</div>
+    </div>
+  </div>
+
+  <!-- ══ FOOTER RULE ════════════════════════════════ -->
+  <div class="foot-rule">
+    <span class="foot-copy">Done. — Task Manager</span>
+    <span class="foot-hint">↵ Enter to add · Esc to cancel</span>
+  </div>
+
+</div><!-- /page -->
+
+<!-- ══ DELETE MODAL ══════════════════════════════════ -->
+<div class="veil" id="veil" role="dialog" aria-modal="true" aria-labelledby="modal-h">
+  <div class="modal">
+    <div class="modal-kicker">⚠ Confirm action</div>
+    <div class="modal-title" id="modal-h">Delete task?</div>
+    <div class="modal-body">This task will be permanently removed and cannot be undone.</div>
+    <div class="modal-row">
+      <button class="modal-cancel"  id="m-cancel">Cancel</button>
+      <button class="modal-confirm" id="m-confirm">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TOAST ═════════════════════════════════════════ -->
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ════════════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════════════ */
+let tasks   = [];       // [{id, text, done, ts}]
+let view    = 'all';    // 'all' | 'active' | 'done'
+let doomed  = null;     // task id awaiting delete confirmation
+
+/* ════════════════════════════════════════════════════
+   PERSISTENCE
+════════════════════════════════════════════════════ */
+const KEY = 'done_tasks_v1';
+function persist() { localStorage.setItem(KEY, JSON.stringify(tasks)); }
+function hydrate() {
+  try { tasks = JSON.parse(localStorage.getItem(KEY)) || []; }
+  catch { tasks = []; }
+}
+
+/* ════════════════════════════════════════════════════
+   THEME
+════════════════════════════════════════════════════ */
+const html     = document.documentElement;
+const themeBtn = document.getElementById('theme-btn');
+
+function applyTheme(dark) {
+  html.setAttribute('data-theme', dark ? 'dark' : 'light');
+  themeBtn.textContent = dark ? '🌙' : '☀️';
+  localStorage.setItem('done_theme', dark ? 'dark' : 'light');
+}
+
+themeBtn.addEventListener('click', () =>
+  applyTheme(html.getAttribute('data-theme') !== 'dark'));
+
+/* Init theme */
+(function() {
+  const saved = localStorage.getItem('done_theme');
+  applyTheme(saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme:dark)').matches);
+})();
+
+/* ════════════════════════════════════════════════════
+   DATE / HEADER STRINGS
+════════════════════════════════════════════════════ */
+(function initDate() {
+  const d    = new Date();
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const mons = ['January','February','March','April','May','June',
+                'July','August','September','October','November','December'];
+  const pad  = n => String(n).padStart(2,'0');
+
+  document.getElementById('date-line').textContent =
+    `${days[d.getDay()]} — ${mons[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+  document.getElementById('date-str').textContent =
+    `${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())}`;
+})();
+
+/* ════════════════════════════════════════════════════
+   UTILITIES
+════════════════════════════════════════════════════ */
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
+function by(id){ return document.getElementById(id); }
+function qs(s) { return document.querySelector(s); }
+function find(id){ return tasks.find(t => t.id === id); }
+
+/** Escape HTML — prevent XSS */
+function esc(s){
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/** Human-readable age */
+function ago(ts){
+  const s = (Date.now() - ts) / 1000;
+  if (s < 60)    return 'just now';
+  if (s < 3600)  return `${Math.floor(s/60)}m ago`;
+  if (s < 86400) return `${Math.floor(s/3600)}h ago`;
+  return `${Math.floor(s/86400)}d ago`;
+}
+
+/* ════════════════════════════════════════════════════
+   TOAST
+════════════════════════════════════════════════════ */
+let toastTmr;
+function showToast(msg) {
+  const el = by('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTmr);
+  toastTmr = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+/* ════════════════════════════════════════════════════
+   MODAL
+════════════════════════════════════════════════════ */
+const veil = by('veil');
+function openModal()  { veil.classList.add('on'); }
+function closeModal() { veil.classList.remove('on'); doomed = null; }
+
+by('m-cancel').addEventListener('click', closeModal);
+veil.addEventListener('click', e => { if (e.target === veil) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+by('m-confirm').addEventListener('click', () => {
+  if (!doomed) return;
+  const el = qs(`.task[data-id="${CSS.escape(doomed)}"]`);
+  closeModal();
+  if (el) {
+    el.classList.add('bye');
+    el.addEventListener('animationend', () => {
+      tasks   = tasks.filter(t => t.id !== doomed);
+      doomed  = null;
+      persist(); render(); showToast('Task removed');
+    }, { once:true });
+  } else {
+    tasks   = tasks.filter(t => t.id !== doomed);
+    doomed  = null;
+    persist(); render();
+  }
+});
+
+/* ════════════════════════════════════════════════════
+   CRUD — CREATE
+════════════════════════════════════════════════════ */
+function addTask(raw) {
+  const text = raw.trim();
+  if (!text) { showToast('Please write a task first'); return false; }
+  tasks.unshift({ id:uid(), text, done:false, ts:Date.now() });
+  persist(); render(); showToast('Task added');
+  return true;
+}
+
+/* ════════════════════════════════════════════════════
+   CRUD — TOGGLE
+════════════════════════════════════════════════════ */
+function toggleTask(id) {
+  const t = find(id);
+  if (t) { t.done = !t.done; persist(); render(); }
+}
+
+/* ════════════════════════════════════════════════════
+   CRUD — EDIT (inline)
+════════════════════════════════════════════════════ */
+function startEdit(id) {
+  const li = qs(`.task[data-id="${CSS.escape(id)}"]`);
+  if (!li || li.querySelector('.edit-in')) return;
+  const t = find(id);
+  if (!t) return;
+
+  /* Replace text span with input */
+  const span = li.querySelector('.task-text');
+  const inp  = document.createElement('input');
+  inp.className   = 'edit-in';
+  inp.value       = t.text;
+  inp.maxLength   = 220;
+  inp.setAttribute('aria-label','Edit task');
+  span.replaceWith(inp);
+  inp.focus(); inp.select();
+
+  /* Swap edit → save button */
+  const eb = li.querySelector('.act.ed');
+  if (eb) {
+    eb.textContent = '✓';
+    eb.classList.replace('ed','sv');
+    eb.title   = 'Save';
+    eb.onclick = () => commitEdit(id);
+  }
+
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter')  commitEdit(id);
+    if (e.key === 'Escape') render();
+  });
+}
+
+function commitEdit(id) {
+  const li  = qs(`.task[data-id="${CSS.escape(id)}"]`);
+  const inp = li && li.querySelector('.edit-in');
+  if (!inp) return;
+  const v = inp.value.trim();
+  if (!v) { showToast('Task cannot be empty'); inp.focus(); return; }
+  const t = find(id);
+  if (t) { t.text = v; persist(); render(); showToast('Task updated'); }
+}
+
+/* ════════════════════════════════════════════════════
+   CRUD — DELETE (with confirm)
+════════════════════════════════════════════════════ */
+function askDelete(id) { doomed = id; openModal(); }
+
+/* ════════════════════════════════════════════════════
+   CLEAR COMPLETED
+════════════════════════════════════════════════════ */
+function clearDone() {
+  const n = tasks.filter(t => t.done).length;
+  if (!n) { showToast('No completed tasks'); return; }
+  tasks = tasks.filter(t => !t.done);
+  persist(); render(); showToast(`Cleared ${n} completed task${n>1?'s':''}`);
+}
+
+/* ════════════════════════════════════════════════════
+   RENDER
+════════════════════════════════════════════════════ */
+function visible(){
+  if (view === 'active') return tasks.filter(t => !t.done);
+  if (view === 'done')   return tasks.filter(t =>  t.done);
+  return tasks;
+}
+
+function render(){
+  const shown = visible();
+  const total = tasks.length;
+  const done  = tasks.filter(t => t.done).length;
+  const rem   = total - done;
+
+  /* Stats */
+  by('s-total').textContent  = total;
+  by('s-remain').textContent = rem;
+  by('s-done').textContent   = done;
+
+  /* List count */
+  by('list-count').textContent = `${shown.length} task${shown.length!==1?'s':''}`;
+
+  /* Empty state */
+  const emptyEl = by('empty');
+  const ul      = by('task-ul');
+
+  if (shown.length === 0) {
+    ul.innerHTML = '';
+    emptyEl.classList.add('show');
+    const eh = by('empty-head'), es = by('empty-sub');
+    if (view === 'active')      { eh.textContent='All clear!';      es.textContent='No active tasks right now'; }
+    else if (view === 'done')   { eh.textContent='None completed';   es.textContent='Finish a task to see it here'; }
+    else                        { eh.textContent='Nothing here yet'; es.textContent='Add your first task above'; }
+    return;
+  }
+
+  emptyEl.classList.remove('show');
+
+  /* Build list items */
+  ul.innerHTML = shown.map(t => `
+    <li class="task${t.done?' done':''}" data-id="${esc(t.id)}" role="listitem">
+      <input
+        type="checkbox" class="task-check"
+        ${t.done?'checked':''}
+        aria-label="${t.done?'Mark as active':'Mark as complete'}"
+        onchange="toggleTask('${esc(t.id)}')"
+      />
+      <div class="task-body">
+        <div class="task-text">${esc(t.text)}</div>
+        <div class="task-ts">${ago(t.ts)}</div>
+      </div>
+      <div class="task-acts" aria-label="Task actions">
+        <button class="act ed" title="Edit"   aria-label="Edit task"   onclick="startEdit('${esc(t.id)}')">✏</button>
+        <button class="act dl" title="Delete" aria-label="Delete task" onclick="askDelete('${esc(t.id)}')">✕</button>
+      </div>
+    </li>
+  `).join('');
+}
+
+/* ════════════════════════════════════════════════════
+   FILTER BUTTONS
+════════════════════════════════════════════════════ */
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    view = btn.dataset.f;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    render();
+  });
+});
+
+/* ════════════════════════════════════════════════════
+   INPUT EVENTS
+════════════════════════════════════════════════════ */
+const inp = by('task-input');
+
+by('add-btn').addEventListener('click', () => {
+  if (addTask(inp.value)) inp.value = '';
+  inp.focus();
+});
+
+inp.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { if (addTask(inp.value)) inp.value = ''; }
+});
+
+/* ════════════════════════════════════════════════════
+   CLEAR BUTTON
+════════════════════════════════════════════════════ */
+by('clear-btn').addEventListener('click', clearDone);
+
+/* ════════════════════════════════════════════════════
+   INIT
+════════════════════════════════════════════════════ */
+hydrate();
+render();
+</script>
+</body>
+</html>
